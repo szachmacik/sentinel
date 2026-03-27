@@ -2,5 +2,4 @@ name = "sentinel"
 main = "worker.js"
 compatibility_date = "2025-01-01"
 
-[triggers]
-crons = ["*/5 * * * *"]
+# Cron removed - use keepalive-worker or QStash for scheduling (free plan)
