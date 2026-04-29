@@ -200,18 +200,60 @@ async function handleKeyLeak(leaks, source){
 // ── Router ────────────────────────────────────────────────────────
 
 // === MORFICZNE POLE INTEGRATION ===
+
+// === MORFICZNE POLE V2 - Enhanced with Tracking ===
 async function getMorphicWisdom(env) {
-  if (!env.AGENT_STATE) return null;
+  if (!env.AGENT_STATE) {
+    console.warn('⚠️  AGENT_STATE D1 not bound - morficzne pole unavailable');
+    return null;
+  }
+  
   try {
+    const startTime = Date.now();
+    
+    // Query morficzne pole
     const imprints = await env.AGENT_STATE.prepare(
-      'SELECT imprint_for_future FROM morphic_field ORDER BY cycle_ts DESC LIMIT 10'
+      `SELECT imprint_for_future, layer, cycle_ts 
+       FROM morphic_field 
+       ORDER BY cycle_ts DESC 
+       LIMIT 10`
     ).all();
-    return imprints.results?.map(i => i.imprint_for_future) || [];
+    
+    const queryDuration = Date.now() - startTime;
+    
+    if (!imprints.results || imprints.results.length === 0) {
+      console.log('ℹ️  Morficzne pole: empty results');
+      return null;
+    }
+    
+    // Log successful activation with emoji
+    console.log(`🌊 Morficzne pole ACTIVE: ${imprints.results.length} patterns loaded in ${queryDuration}ms`);
+    
+    // Track usage (fire-and-forget)
+    try {
+      env.AGENT_STATE.prepare(
+        `INSERT INTO morphic_field_usage (worker_name, patterns_loaded, query_ms, timestamp)
+         VALUES (?, ?, ?, datetime('now'))`
+      ).bind('worker', imprints.results.length, queryDuration).run().catch(() => {});
+    } catch (e) {
+      // Tracking failure is non-critical
+    }
+    
+    // Return compressed wisdom with metadata
+    return {
+      patterns: imprints.results.map(i => i.imprint_for_future),
+      layers: [...new Set(imprints.results.map(i => i.layer))],
+      count: imprints.results.length,
+      latency_ms: queryDuration,
+      timestamp: new Date().toISOString()
+    };
+    
   } catch (e) {
-    console.error('Morficzne pole:', e.message);
+    console.error('❌ Morficzne pole error:', e.message);
     return null;
   }
 }
+
 
 export default {
   async fetch(request, env) {
