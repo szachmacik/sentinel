@@ -1,3 +1,5 @@
+// HOLON-META: {"purpose": "sentinel", "wiki": "32d6d069-74d6-8164-a6d5-f41c3d26ae9b"}
+
 /**
  * SENTINEL v1 — Układ Immunologiczny ofshore.dev
  * 
